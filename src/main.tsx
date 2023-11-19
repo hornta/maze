@@ -7,7 +7,7 @@ import wallTexture from "./wall.png";
 import ceilingTexture from "./ceiling.png";
 import smileyTexture from "./smiley.png";
 import { Node, makeGraph } from "./maze2.ts";
-import { OrbitControls } from "three/examples/jsm/Addons.js";
+// import { OrbitControls } from "three/examples/jsm/Addons.js";
 
 const textureLoader = new THREE.TextureLoader();
 
@@ -68,7 +68,7 @@ const Maze = () => {
     window.addEventListener("resize", onResize);
     onResize();
 
-    const axesHelper = new THREE.AxesHelper(Number.MAX_SAFE_INTEGER);
+    // const axesHelper = new THREE.AxesHelper(Number.MAX_SAFE_INTEGER);
     // scene.add(axesHelper);
     const MAX_ANISOTROPY = renderer.capabilities.getMaxAnisotropy();
 
