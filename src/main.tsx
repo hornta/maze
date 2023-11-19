@@ -15,9 +15,10 @@ const MOVE_SPEED = 1.6;
 const ROTATE_SPEED = Math.PI * 0.9;
 const PRIORITIZED_TURN_ANGLES = [90, 0, -90, 180];
 const WALL_SCALE_SPEED = 0.5;
+const FLIP_SPEED = 2;
 
-const W = 40;
-const H = 40;
+const W = 2;
+const H = 2;
 
 function fix(u: THREE.Vector3, v: THREE.Vector3) {
   const denominator = Math.sqrt(u.lengthSq() * v.lengthSq());
@@ -152,6 +153,7 @@ const Maze = () => {
     function buildSmiley() {
       const map = textureLoader.load(smileyTexture);
       const material = new THREE.SpriteMaterial({ map: map });
+      material.opacity = 0.6;
       const sprite = new THREE.Sprite(material);
       sprite.position.x = maze2.endNode.x + 0.5;
       sprite.position.z = maze2.endNode.y + 0.5;
@@ -160,7 +162,7 @@ const Maze = () => {
       return sprite;
     }
 
-    {
+    function buildFloor() {
       // FLOOR
       const geometry = new THREE.PlaneGeometry(W, H);
       const texture = textureLoader.load(floorTexture);
@@ -178,9 +180,9 @@ const Maze = () => {
       );
       mesh.position.x = W / 2;
       mesh.position.z = H / 2;
-      scene.add(mesh);
+      return mesh;
     }
-    {
+    function buildCeiling() {
       // CEILING
       const geometry = new THREE.PlaneGeometry(W, H);
       const texture = textureLoader.load(ceilingTexture);
@@ -199,13 +201,17 @@ const Maze = () => {
       mesh.position.x = W / 2;
       mesh.position.z = H / 2;
       mesh.position.y = 1;
-      scene.add(mesh);
+      return mesh;
     }
 
     const group = new THREE.Group();
     group.scale.y = 0;
     const walls = buildWall();
     const smiley = buildSmiley();
+    const floor = buildFloor();
+    const ceiling = buildCeiling();
+    scene.add(floor);
+    scene.add(ceiling);
     group.add(walls);
     group.add(smiley);
     scene.add(group);
@@ -303,9 +309,6 @@ const Maze = () => {
           prevNode = targetNode;
           targetNode = getPrioritizedNeighbor(targetNode, _prevNode)!;
           rotateTarget = getPrioritizedNeighbor(targetNode, prevNode);
-          if (targetNode.key === maze2.endNode.key) {
-            state = "teardown";
-          }
         } else {
           // rotate towards target
           const matrix = new THREE.Matrix4();
