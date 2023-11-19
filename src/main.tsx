@@ -15,10 +15,9 @@ const MOVE_SPEED = 1.6;
 const ROTATE_SPEED = Math.PI * 0.9;
 const PRIORITIZED_TURN_ANGLES = [90, 0, -90, 180];
 const WALL_SCALE_SPEED = 0.5;
-const FLIP_SPEED = 2;
 
-const W = 2;
-const H = 2;
+const W = 40;
+const H = 40;
 
 function fix(u: THREE.Vector3, v: THREE.Vector3) {
   const denominator = Math.sqrt(u.lengthSq() * v.lengthSq());
