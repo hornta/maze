@@ -12,9 +12,11 @@ import { Node, makeGraph } from "./maze2.ts";
 const textureLoader = new THREE.TextureLoader();
 
 const MOVE_SPEED = 1.6;
-const ROTATE_SPEED = Math.PI * 0.9;
+const ROTATE_SPEED = 3;
 const PRIORITIZED_TURN_ANGLES = [90, 0, -90, 180];
 const WALL_SCALE_SPEED = 0.5;
+const START_FLIPPED = false;
+let isFlipped = START_FLIPPED;
 
 const W = 40;
 const H = 40;
@@ -56,6 +58,8 @@ const Maze = () => {
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasEl,
     });
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
 
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -143,7 +147,10 @@ const Maze = () => {
       const material = new THREE.MeshBasicMaterial({
         map: texture,
       });
+
       const walls = new THREE.Mesh(geometry, material);
+      walls.castShadow = true;
+      walls.receiveShadow = true;
       // scene.add(walls);
 
       return walls;
@@ -159,6 +166,15 @@ const Maze = () => {
       sprite.position.y = 0.5;
       // scene.add(sprite);
       return sprite;
+    }
+
+    function buildDodeca() {
+      const geometry = new THREE.DodecahedronGeometry(0.3, 0);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x808080,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      return mesh;
     }
 
     function buildFloor() {
@@ -191,6 +207,7 @@ const Maze = () => {
       texture.anisotropy = MAX_ANISOTROPY;
       const material = new THREE.MeshBasicMaterial({
         map: texture,
+        color: 0xffffff,
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.rotateOnAxis(
@@ -209,11 +226,18 @@ const Maze = () => {
     const smiley = buildSmiley();
     const floor = buildFloor();
     const ceiling = buildCeiling();
+    const dodeca = buildDodeca();
+
+    dodeca.position.x = maze2.detailNodes[0].x + 0.5;
+    dodeca.position.z = maze2.detailNodes[0].y + 0.5;
+    dodeca.position.y = 0.5;
+
     scene.add(floor);
     scene.add(ceiling);
     group.add(walls);
     group.add(smiley);
     scene.add(group);
+    scene.add(dodeca);
 
     // const controls = new OrbitControls(camera, canvasEl);
 
@@ -257,10 +281,15 @@ const Maze = () => {
     };
 
     let targetNode = maze2.nodes[prevNode.edges[0]];
-    let rotateTarget = targetNode;
+    let rotateTarget = getPrioritizedNeighbor(targetNode, prevNode);
     camera.lookAt(nodeToVector3(targetNode));
 
+    if (isFlipped) {
+      camera.rotateZ(180 * THREE.MathUtils.DEG2RAD);
+    }
+
     let state = "warmup";
+    const flipTargetRotation = new THREE.Quaternion();
 
     let rAFHandle: number;
     const animate: FrameRequestCallback = (currentTime) => {
@@ -287,6 +316,15 @@ const Maze = () => {
           setMaze(makeGraph(W, H));
           state = "warmup";
         }
+      } else if (state === "flip") {
+        camera.quaternion.rotateTowards(
+          flipTargetRotation,
+          ROTATE_SPEED * delta
+        );
+        if (camera.quaternion.equals(flipTargetRotation)) {
+          isFlipped = !isFlipped;
+          state = "run";
+        }
       } else {
         const targetPos = nodeToVector3(targetNode);
         const rotateTargetPos = nodeToVector3(rotateTarget);
@@ -308,13 +346,36 @@ const Maze = () => {
           prevNode = targetNode;
           targetNode = getPrioritizedNeighbor(targetNode, _prevNode)!;
           rotateTarget = getPrioritizedNeighbor(targetNode, prevNode);
+          if (targetNode.key === maze2.endNode.key) {
+            state = "teardown";
+            return;
+          } else {
+            const detailNodeFound = maze2.detailNodes.find((node) => {
+              return node.key === targetNode.key;
+            });
+            if (detailNodeFound) {
+              const matrix = new THREE.Matrix4();
+              matrix.lookAt(
+                camera.position,
+                nodeToVector3(targetNode),
+                new THREE.Vector3(0, isFlipped ? 1 : -1, 0)
+              );
+              flipTargetRotation.setFromRotationMatrix(matrix);
+              state = "flip";
+            }
+          }
         } else {
           // rotate towards target
           const matrix = new THREE.Matrix4();
-          matrix.lookAt(camera.position, rotateTargetPos, camera.up);
+          matrix.lookAt(
+            camera.position,
+            rotateTargetPos,
+            new THREE.Vector3(0, isFlipped ? -1 : 1, 0)
+          );
           const quaternion = new THREE.Quaternion();
           quaternion.setFromRotationMatrix(matrix);
           camera.quaternion.rotateTowards(quaternion, ROTATE_SPEED * delta);
+
           // const angle =
           //   quaternion.angleTo(camera.quaternion) * THREE.MathUtils.RAD2DEG;
           // move towards target

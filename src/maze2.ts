@@ -26,8 +26,29 @@ export const makeGraph = (width: number, height: number) => {
     }
   }
 
-  const startNode = nodes[randInt(0, nodes.length - 1)];
-  const endNode = nodes[randInt(0, nodes.length - 1)];
+  const selectedDetailNodes: Node[] = [];
+  const startNode = getDetailNode();
+  const endNode = getDetailNode();
+
+  const maxDetailNodes = Math.min(1, nodes.length - 2);
+
+  function getDetailNode() {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const node = nodes[randInt(0, nodes.length - 1)];
+      if (selectedDetailNodes.includes(node)) {
+        continue;
+      } else {
+        selectedDetailNodes.push(node);
+        return node;
+      }
+    }
+  }
+
+  const detailNodes: Node[] = [];
+  for (let i = 0; i < maxDetailNodes; ++i) {
+    detailNodes.push(getDetailNode());
+  }
 
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
@@ -89,5 +110,6 @@ export const makeGraph = (width: number, height: number) => {
     width,
     height,
     makeNodeKey,
+    detailNodes,
   };
 };
